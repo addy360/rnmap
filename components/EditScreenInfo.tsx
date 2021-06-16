@@ -1,80 +1,79 @@
-import * as WebBrowser from 'expo-web-browser';
-import React from 'react';
-import { StyleSheet, TouchableOpacity } from 'react-native';
+import * as WebBrowser from "expo-web-browser";
+import React, { useEffect, useState } from "react";
+import { StyleSheet } from "react-native";
+import winDimensions from "../constants/Layout";
 
-import Colors from '../constants/Colors';
-import { MonoText } from './StyledText';
-import { Text, View } from './Themed';
+import { Text, View } from "./Themed";
+import MapView, { Geojson } from "react-native-maps";
+import * as Location from "expo-location";
+
+interface Coo {
+  latitude: number;
+  longitude: number;
+  altitude: number | null;
+  accuracy: number | null;
+  altitudeAccuracy: number | null;
+  heading: number | null;
+  speed: number | null;
+}
 
 export default function EditScreenInfo({ path }: { path: string }) {
+  const [Coords, setCoords] = useState<Coo | undefined>(undefined);
+  const getLocation = async () => {
+    const { granted } = await Location.requestForegroundPermissionsAsync();
+    if (!granted) return;
+
+    const { coords } = await Location.getCurrentPositionAsync();
+    if (!coords) return;
+
+    setCoords(coords);
+  };
+  useEffect(() => {
+    getLocation();
+  }, []);
+
+  const myPlace = {
+    type: "FeatureCollection",
+    features: [
+      {
+        type: "Feature",
+        properties: {},
+        geometry: {
+          type: "Point",
+          coordinates: [Coords?.longitude, Coords?.latitude],
+        },
+      },
+    ],
+  };
   return (
-    <View>
-      <View style={styles.getStartedContainer}>
-        <Text
-          style={styles.getStartedText}
-          lightColor="rgba(0,0,0,0.8)"
-          darkColor="rgba(255,255,255,0.8)">
-          Open up the code for this screen:
-        </Text>
-
-        <View
-          style={[styles.codeHighlightContainer, styles.homeScreenFilename]}
-          darkColor="rgba(255,255,255,0.05)"
-          lightColor="rgba(0,0,0,0.05)">
-          <MonoText>{path}</MonoText>
+    <View style={styles.container}>
+      {!Coords ? (
+        <View>
+          <Text>Getting your current position</Text>
         </View>
-
-        <Text
-          style={styles.getStartedText}
-          lightColor="rgba(0,0,0,0.8)"
-          darkColor="rgba(255,255,255,0.8)">
-          Change any of the text, save the file, and your app will automatically update.
-        </Text>
-      </View>
-
-      <View style={styles.helpContainer}>
-        <TouchableOpacity onPress={handleHelpPress} style={styles.helpLink}>
-          <Text style={styles.helpLinkText} lightColor={Colors.light.tint}>
-            Tap here if your app doesn't automatically update after making changes
-          </Text>
-        </TouchableOpacity>
-      </View>
+      ) : (
+        <MapView style={styles.map}>
+          <Geojson
+            geojson={myPlace}
+            strokeColor="red"
+            fillColor="green"
+            strokeWidth={2}
+          />
+        </MapView>
+      )}
     </View>
   );
 }
 
-function handleHelpPress() {
-  WebBrowser.openBrowserAsync(
-    'https://docs.expo.io/get-started/create-a-new-app/#opening-the-app-on-your-phonetablet'
-  );
-}
-
 const styles = StyleSheet.create({
-  getStartedContainer: {
-    alignItems: 'center',
+  container: {
+    alignItems: "center",
     marginHorizontal: 50,
+    height: winDimensions.window.height,
+    width: winDimensions.window.width,
   },
-  homeScreenFilename: {
-    marginVertical: 7,
-  },
-  codeHighlightContainer: {
-    borderRadius: 3,
-    paddingHorizontal: 4,
-  },
-  getStartedText: {
-    fontSize: 17,
-    lineHeight: 24,
-    textAlign: 'center',
-  },
-  helpContainer: {
-    marginTop: 15,
-    marginHorizontal: 20,
-    alignItems: 'center',
-  },
-  helpLink: {
-    paddingVertical: 15,
-  },
-  helpLinkText: {
-    textAlign: 'center',
+  map: {
+    height: "100%",
+    width: "100%",
   },
 });
